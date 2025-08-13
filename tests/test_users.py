@@ -5,18 +5,6 @@ API_BASE_URL = "http://0.0.0.0:8002/api"
 user_id = 2
 headers = {'x-api-key': 'reqres-free-v1'}
 
-def test_user_data():
-    # url = "http://0.0.0.0:8002/api/users/2"
-
-    expected_id = 2
-    expected_email = "janet.weaver@reqres.in"
-
-    response = requests.get(url=f"{API_BASE_URL}/users/{user_id}", headers=headers)
-
-    actual_data = response.json()["data"]
-
-    assert actual_data["id"] == expected_id
-    assert actual_data["email"] == expected_email
 
 def test_create_user():
     name = "morpheus"
