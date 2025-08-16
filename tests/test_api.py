@@ -1,8 +1,28 @@
+import json
 import math
 from http import HTTPStatus
 import pytest
 import requests
-from models.User import User
+from app.models.User import User
+
+
+@pytest.fixture(scope="module")
+def fill_test_data(app_url):
+    with open("users.json") as f:
+        test_data_users = json.load(f)
+    api_users = []
+    for user in test_data_users:
+        response = requests.post(f"{app_url}/api/users", json=user)
+        a = response.json()
+        api_users.append(response.json())
+    user_ids = [user["id"] for user in api_users]
+
+    yield user_ids
+
+    for user_id in user_ids:
+        requests.delete(f"{app_url}/api/users/{user_id}")
+
+
 
 
 
@@ -10,17 +30,16 @@ from models.User import User
 def users(app_url):
     response = requests.get(f"{app_url}/api/users")
     assert response.status_code == HTTPStatus.OK
-    return response.json()["items"]
+    return response.json()
 
-
-
+@pytest.mark.usefixtures("fill_test_data")
 def test_users(app_url):
     response = requests.get(f"{app_url}/api/users")
     assert response.status_code == HTTPStatus.OK
 
-    users = response.json()["items"]
-    print(users)
-    for user in users:
+    user_list = response.json()
+    print(user_list)
+    for user in user_list:
         User.model_validate(user)
 
 def test_users_no_duplicates(users):
@@ -28,13 +47,16 @@ def test_users_no_duplicates(users):
     assert len(users_ids) == len(set(users_ids))
 
 
-@pytest.mark.parametrize("user_id", [7, 9, 11])
-def test_user(app_url, user_id):
-    response = requests.get(f"{app_url}/api/users/{user_id}")
-    assert response.status_code == HTTPStatus.OK
 
-    user = response.json()
-    User.model_validate(user)
+# @pytest.mark.parametrize("user_id", [1, 7, 12])
+
+def test_user(app_url, fill_test_data):
+    for user_id in (fill_test_data[0], fill_test_data[-1]):
+        response = requests.get(f"{app_url}/api/users/{user_id}")
+        assert response.status_code == HTTPStatus.OK
+
+        user = response.json()
+        User.model_validate(user)
 
 @pytest.mark.parametrize("user_id", [0, 21])
 def test_user_nonexistent_values(app_url, user_id):

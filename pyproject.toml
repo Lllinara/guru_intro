@@ -15,6 +15,9 @@ uvicorn = "^0.35.0"
 dotenv = "^0.9.9"
 requests = "^2.32.4"
 fastapi-pagination = "^0.13.3"
+psycopg2-binary = "^2.9.10"
+sqlalchemy = "^2.0.43"
+sqlmodel = "^0.0.24"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
