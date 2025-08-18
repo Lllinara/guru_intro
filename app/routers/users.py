@@ -36,7 +36,7 @@ def create_user(user: User) -> User:
     UserCreate.model_validate(user.model_dump())
     return users.create_user(user)
 
-@router.put("/{user_id}", status_code=HTTPStatus.OK)
+@router.patch("/{user_id}", status_code=HTTPStatus.OK)
 def update_user(user_id: int, user: User) -> User:
     if user_id < 1:
         raise HTTPException(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail="Invalid user")

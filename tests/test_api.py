@@ -1,9 +1,11 @@
 import json
 import math
+import uuid
+from enum import unique
 from http import HTTPStatus
 import pytest
 import requests
-from app.models.User import User
+from app.models.User import User, UserCreate
 
 
 @pytest.fixture(scope="module")
@@ -21,6 +23,23 @@ def fill_test_data(app_url):
 
     for user_id in user_ids:
         requests.delete(f"{app_url}/api/users/{user_id}")
+
+@pytest.fixture
+def generate_user_data(app_url):
+    unique_id = str(uuid.uuid4())[:8]
+    user_data = {
+        "email": unique_id + "@yandex.ru",
+        "first_name": "Alexandr" + unique_id,
+        "last_name": "Neotvlekaisa" + unique_id,
+        "avatar": "http://irir" + unique_id
+    }
+    return user_data
+
+@pytest.fixture
+def create_user(app_url, generate_user_data):
+    response = requests.post(f"{app_url}/api/users", json=generate_user_data)
+    assert response.status_code == HTTPStatus.CREATED
+    return response.json()
 
 
 
@@ -106,3 +125,34 @@ def test_different_data_on_different_pages(app_url, users, size):
         assert user_ids1 != user_ids2, "На обеих страницах одинаковые данные"
     else:
         assert len(data2['items']) == 0 and len(data1["items"]) == len(users), "Страница 2 пустая"
+
+
+def test_create_user(app_url, generate_user_data):
+    response = requests.post(f"{app_url}/api/users", json=generate_user_data)
+    assert response.status_code == HTTPStatus.CREATED
+    get_user = requests.get(f"{app_url}/api/users/{response.json()['id']}").json()
+    assert get_user["last_name"] == generate_user_data["last_name"]
+
+def test_delete_user(app_url, create_user):
+    user_id = create_user["id"]
+    response = requests.delete(f"{app_url}/api/users/{user_id}")
+    assert response.status_code == HTTPStatus.OK
+    response = requests.get(f"{app_url}/api/users/{user_id}")
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+def test_update_user(app_url, create_user):
+    user_data = create_user
+    user_id = create_user["id"]
+    new_user_data = {
+        "email": "new" + user_data["email"],
+        "first_name": "new" + user_data["first_name"],
+        "last_name": "new" + user_data["last_name"],
+        "avatar": user_data["avatar"] + "new",
+    }
+    response = requests.patch(f"{app_url}/api/users/{user_id}", json=new_user_data)
+    assert response.status_code == HTTPStatus.OK
+    response = requests.get(f"{app_url}/api/users/{user_id}")
+    checking_user = response.json()
+    assert checking_user["email"] == new_user_data["email"]
+    assert checking_user["last_name"] == new_user_data["last_name"]
+
