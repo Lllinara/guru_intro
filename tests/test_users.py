@@ -27,8 +27,6 @@
 #     assert 'token' in actual_data
 #     assert actual_data['token'] == expected_token
 #
-#
-#
 # def test_update_user():
 #     name = "morpheus"
 #     job = "zion resident"
