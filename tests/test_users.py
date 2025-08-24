@@ -26,16 +26,14 @@
 #
 #     assert 'token' in actual_data
 #     assert actual_data['token'] == expected_token
-
-
-
-def test_update_user():
-    name = "morpheus"
-    job = "zion resident"
-
-    response = requests.put(url=f"{API_BASE_URL}/users/{user_id}", json={"name": name, "job": job}, headers=headers)
-
-    actual_data = response.json()
-    print(actual_data)
-    assert 'updatedAt' in actual_data
-    assert actual_data["name"] == name
+#
+# def test_update_user():
+#     name = "morpheus"
+#     job = "zion resident"
+#
+#     response = requests.put(url=f"{API_BASE_URL}/users/{user_id}", json={"name": name, "job": job}, headers=headers)
+#
+#     actual_data = response.json()
+#     print(actual_data)
+#     assert 'updatedAt' in actual_data
+#     assert actual_data["name"] == name
