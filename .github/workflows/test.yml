@@ -30,6 +30,7 @@ jobs:
 
       - run: docker compose build
       - run: docker compose up -d
+      - run: pytest tests --junit-xml=test-results.xml
 
       - run: docker compose logs app
         if: always()
