@@ -1,20 +1,18 @@
 import json
-import math
 import uuid
-from enum import unique
 from http import HTTPStatus
 import pytest
-import requests
-from app.models.User import User, UserCreate
+from app.models.User import User
+from clients.client import ApiClient
 
 
 @pytest.fixture(scope="module")
-def fill_test_data(app_url):
+def fill_test_data(env):
     with open("users.json") as f:
         test_data_users = json.load(f)
     api_users = []
     for user in test_data_users:
-        response = requests.post(f"{app_url}/api/users", json=user)
+        response = ApiClient(env=env).create_user(user)
         a = response.json()
         api_users.append(response.json())
     user_ids = [user["id"] for user in api_users]
@@ -22,7 +20,7 @@ def fill_test_data(app_url):
     yield user_ids
 
     for user_id in user_ids:
-        requests.delete(f"{app_url}/api/users/{user_id}")
+        ApiClient(env=env).delete_user(user_id)
 
 @pytest.fixture
 def generate_user_data(app_url):
@@ -36,30 +34,29 @@ def generate_user_data(app_url):
     return user_data
 
 @pytest.fixture
-def create_user(app_url, generate_user_data):
-    response = requests.post(f"{app_url}/api/users", json=generate_user_data)
+def create_user(env, generate_user_data):
+    response = ApiClient(env=env).create_user(generate_user_data)
     assert response.status_code == HTTPStatus.CREATED
     return response.json()
 
-
-
-
-
 @pytest.fixture
-def users(app_url):
-    response = requests.get(f"{app_url}/api/users")
+def users(env):
+    response = ApiClient(env=env).get_users()
     assert response.status_code == HTTPStatus.OK
     return response.json()
 
+
+
+
 @pytest.mark.usefixtures("fill_test_data")
-def test_users(app_url):
-    response = requests.get(f"{app_url}/api/users")
+def test_users(env):
+    response = ApiClient(env=env).get_users()
     assert response.status_code == HTTPStatus.OK
 
     user_list = response.json()
-    print(user_list)
     for user in user_list:
         User.model_validate(user)
+
 
 def test_users_no_duplicates(users):
     users_ids = [user["id"] for user in users]
@@ -67,24 +64,26 @@ def test_users_no_duplicates(users):
 
 
 
-# @pytest.mark.parametrize("user_id", [1, 7, 12])
+# def test_user(like_reqresin, fill_test_data):
+#     for user_id in (fill_test_data[0], fill_test_data[-1]):
+#         response = like_reqresin.get(f"/api/users/{user_id}")
+#         assert response.status_code == HTTPStatus.OK
+#
+#         user = response.json()
+#         User.model_validate(user)
 
-def test_user(app_url, fill_test_data):
+def test_user_client(env, fill_test_data):
     for user_id in (fill_test_data[0], fill_test_data[-1]):
-        response = requests.get(f"{app_url}/api/users/{user_id}")
+        response = ApiClient(env=env).get_user(user_id)
         assert response.status_code == HTTPStatus.OK
+        User.model_validate(response.json())
 
-        user = response.json()
-        User.model_validate(user)
 
-@pytest.mark.parametrize("user_id", [0, 21])
-def test_user_nonexistent_values(app_url, user_id):
-    response = requests.get(f"{app_url}/api/users/{user_id}")
-    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
 
-@pytest.mark.parametrize("user_id", ["hdh"])
-def test_user_nonexistent_values(app_url, user_id):
-    response = requests.get(f"{app_url}/api/users/{user_id}")
+
+@pytest.mark.parametrize("user_id", [0, "hdh"])
+def test_user_unvalues(env, user_id):
+    response = ApiClient(env=env).get_user(user_id)
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
 
@@ -127,20 +126,28 @@ def test_user_nonexistent_values(app_url, user_id):
 #         assert len(data2['items']) == 0 and len(data1["items"]) == len(users), "Страница 2 пустая"
 
 
-def test_create_user(app_url, generate_user_data):
-    response = requests.post(f"{app_url}/api/users", json=generate_user_data)
+def test_create_user(env, generate_user_data):
+    response = ApiClient(env=env).create_user(generate_user_data)
     assert response.status_code == HTTPStatus.CREATED
-    get_user = requests.get(f"{app_url}/api/users/{response.json()['id']}").json()
+    get_user = ApiClient(env=env).get_user(response.json()['id']).json()
     assert get_user["last_name"] == generate_user_data["last_name"]
 
-def test_delete_user(app_url, create_user):
+
+
+# def test_create_user(app_url, generate_user_data):
+#     response = requests.post(f"{app_url}/api/users", json=generate_user_data)
+#     assert response.status_code == HTTPStatus.CREATED
+#     get_user = requests.get(f"{app_url}/api/users/{response.json()['id']}").json()
+#     assert get_user["last_name"] == generate_user_data["last_name"]
+
+def test_delete_user(env, create_user):
     user_id = create_user["id"]
-    response = requests.delete(f"{app_url}/api/users/{user_id}")
+    response = ApiClient(env=env).delete_user(user_id)
     assert response.status_code == HTTPStatus.OK
-    response = requests.get(f"{app_url}/api/users/{user_id}")
+    response = ApiClient(env=env).get_user(user_id)
     assert response.status_code == HTTPStatus.NOT_FOUND
 
-def test_update_user(app_url, create_user):
+def test_update_user(env, create_user):
     user_data = create_user
     user_id = create_user["id"]
     new_user_data = {
@@ -149,10 +156,9 @@ def test_update_user(app_url, create_user):
         "last_name": "new" + user_data["last_name"],
         "avatar": user_data["avatar"] + "new",
     }
-    response = requests.patch(f"{app_url}/api/users/{user_id}", json=new_user_data)
+    response = ApiClient(env=env).update_user(user_id,new_user_data)
     assert response.status_code == HTTPStatus.OK
-    response = requests.get(f"{app_url}/api/users/{user_id}")
+    response = ApiClient(env=env).get_user(user_id)
     checking_user = response.json()
     assert checking_user["email"] == new_user_data["email"]
     assert checking_user["last_name"] == new_user_data["last_name"]
-
