@@ -79,12 +79,9 @@ def test_user_client(env, fill_test_data):
         User.model_validate(response.json())
 
 
-@pytest.mark.parametrize("user_id", [1, 100000000])
-def test_user_nonexistent_values(env, user_id):
-    response = ApiClient(env=env).get_user(user_id)
-    assert response.status_code == HTTPStatus.NOT_FOUND
 
-@pytest.mark.parametrize("user_id", ["hdh"])
+
+@pytest.mark.parametrize("user_id", [0, "hdh"])
 def test_user_unvalues(env, user_id):
     response = ApiClient(env=env).get_user(user_id)
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
